@@ -1,0 +1,40 @@
+{
+  "name": "cf-vinextpress",
+  "version": "0.1.0",
+  "private": true,
+  "packageManager": "npm@12.2.1",
+  "dependencies": {
+    "@cloudflare/workers-response-store": "^1.1.2",
+    "@vinext/cloudflare": "^1.2.0",
+    "marked": "^18.1.2",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-server-dom-webpack": "^19.3.1",
+    "vinext": "^1.3.0"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "^2.0.0-beta.v.4",
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^26.6.5",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "@vitejs/plugin-rsc": "^0.5.38",
+    "cf": "^1.0.0-beta.20",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5"
+  },
+  "type": "module",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "start": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "deploy": "vinext-cloudflare deploy",
+    "deploy:response-store": "cf deploy --prebuilt --mode production --worker cf-vinextpress-response-store",
+    "db:migrate:create": "cf d1 migrations create",
+    "db:migrate:apply:remote": "cf d1 migrations apply 4da385df-ba31-47a7-a927-089fe7a6e76a --remote",
+    "db:migrate:apply:local": "cf d1 migrations apply 4da385df-ba31-47a7-a927-089fe7a6e76a --local"
+  }
+}
