@@ -119,8 +119,20 @@ export const CoreHooks = {
   PostPermalink: "post_permalink",
   /** Runs once the installation completes. (settings) */
   InstallCompleted: "install_completed",
+  /** Runs after site settings are saved. (username) */
+  SettingsSaved: "settings_saved",
   /** Runs when the active theme boots for a request. (theme, ctx) */
   ThemeSetup: "theme_setup",
   /** Filter the archive title shown on term/author/date archives. (value: string, query) */
   ArchiveTitle: "archive_title",
+  /** Contribute nodes rendered at the end of <body> on frontend pages. (value: unknown[], press, query) */
+  DocumentFooter: "document_footer",
+  /** Gate a login attempt before credentials are checked. (value: {allowed, reason?}, {username, ip}) */
+  LoginThrottle: "login_throttle",
+  /** Runs on every login attempt through the dashboard form. ({username, ip, success}) */
+  LoginAttempt: "login_attempt",
+  /** Contribute extra form fields to the post/page editor. (value: ReactNode[], {post, type, press}) */
+  AdminEditorFields: "admin_post_editor",
+  /** Intercept an unresolved path before the 404 renders. (value: {target, status} | null, pathname) */
+  PreNotFound: "pre_not_found",
 } as const;

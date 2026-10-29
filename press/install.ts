@@ -25,7 +25,18 @@ export interface InstallInput {
   siteUrl?: string;
 }
 
-export const DEFAULT_ACTIVE_PLUGINS = ["seo-suite", "related-posts", "spam-shield", "shortcode-pack"];
+export const DEFAULT_ACTIVE_PLUGINS = [
+  "seo-suite",
+  "related-posts",
+  "spam-shield",
+  "shortcode-pack",
+  "formsmith",
+  "searchlight",
+  "waypoint",
+  "pulse",
+  "bastion",
+  "social-share",
+];
 
 export async function isSiteInstalled(): Promise<boolean> {
   const settings = await freshSettings();

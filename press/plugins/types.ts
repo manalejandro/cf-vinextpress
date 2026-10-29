@@ -1,7 +1,8 @@
 import type { HookRegistry, ActionCallback, FilterCallback } from "../hooks";
 import type { ShortcodeHandler } from "../content/shortcodes";
 import type { PressContext } from "../context";
-import type { User } from "../types";
+import type { ReactNode } from "react";
+import type { User, UserRole } from "../types";
 
 /**
  * The contract every plugin implements. A plugin is a plain module:
@@ -37,6 +38,25 @@ export interface PluginRestHandlers {
   DELETE?: PluginRouteHandler;
 }
 
+/**
+ * A dashboard screen owned by a plugin, mounted at /admin/ext/<plugin-slug>.
+ * `render` receives the request context and returns any server-rendered
+ * markup (forms may point at the plugin's own "use server" action module).
+ */
+export interface PluginAdminPageContext {
+  press: PressContext;
+  user: User;
+  searchParams: Record<string, string>;
+}
+
+export interface PluginAdminPage {
+  title: string;
+  description?: string;
+  /** Capability required to view the page. Defaults to "administrator". */
+  capability?: UserRole;
+  render: (ctx: PluginAdminPageContext) => ReactNode | Promise<ReactNode>;
+}
+
 export interface PluginAPI {
   /** Filter a value passing through a hook. */
   addFilter<T>(hook: string, callback: FilterCallback<T>, priority?: number): void;
@@ -49,6 +69,8 @@ export interface PluginAPI {
    * Path segments like ":id" are captured into ctx.params.
    */
   registerRestRoute(path: string, handlers: PluginRestHandlers): void;
+  /** Register a dashboard screen at /admin/ext/<plugin-slug>. */
+  registerAdminPage(page: PluginAdminPage): void;
 }
 
 export interface PluginDefinition {
@@ -81,6 +103,7 @@ export function createPluginAPI(
   hooks: HookRegistry,
   shortcodes: Map<string, ShortcodeHandler>,
   routes: RegisteredPluginRoute[],
+  adminPages: Map<string, PluginAdminPage>,
 ): PluginAPI {
   return {
     addFilter<T>(hook: string, callback: FilterCallback<T>, priority = 10): void {
@@ -94,6 +117,9 @@ export function createPluginAPI(
     },
     registerRestRoute(path: string, handlers: PluginRestHandlers): void {
       routes.push({ plugin: pluginSlug, path: path.replace(/^\/+|\/+$/g, ""), handlers });
+    },
+    registerAdminPage(page: PluginAdminPage): void {
+      adminPages.set(pluginSlug, page);
     },
   };
 }

@@ -1,6 +1,9 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import type { MediaItem, PostWithAuthor, TermWithCount, User } from "@/press/types";
 import { can } from "@/press/auth";
+import type { PressContext } from "@/press/context";
+import { CoreHooks } from "@/press/hooks";
 import { savePostAction, trashPostAction } from "../actions";
 import { ContentEditor, TitleSlugFields } from "./editor";
 import { BTN_ACCENT, BTN_SECONDARY, INPUT, LABEL } from "./ui";
@@ -22,9 +25,10 @@ export interface PostEditorProps {
   postTerms?: { categories: number[]; tags: string[] };
   /** Public URL of the post when published (computed by the caller). */
   viewUrl?: string | null;
+  press: PressContext;
 }
 
-export function PostEditor({
+export async function PostEditor({
   type,
   post,
   categories,
@@ -34,9 +38,22 @@ export function PostEditor({
   user,
   postTerms,
   viewUrl,
+  press,
 }: PostEditorProps) {
   const canPublish = can(user, "publish_posts");
   const isPage = type === "page";
+
+  // Plugins (SEO boxes, custom fields…) contribute extra editor fields.
+  const extraFieldNodes = await press.applyFilters<ReactNode[]>(CoreHooks.AdminEditorFields, [], [
+    { post: post ?? null, type, press },
+  ]);
+  const extraFields =
+    extraFieldNodes.length > 0 ? (
+      <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+        <p className="mb-3 text-sm font-semibold text-slate-800">Extended fields</p>
+        <div className="grid gap-4 sm:grid-cols-2">{extraFieldNodes}</div>
+      </div>
+    ) : null;
   const status = post?.status ?? "draft";
   const submitLabel = !post
     ? canPublish
@@ -88,6 +105,8 @@ export function PostEditor({
               </span>
             </label>
           </div>
+
+          {extraFields}
 
           {!isPage ? (
             <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">

@@ -64,5 +64,13 @@ export const shortcodePack: PluginDefinition = {
     api.registerShortcode("year", () => `${new Date().getUTCFullYear()}`);
 
     api.registerShortcode("hr", () => `<hr class="vp-hr">`);
+
+    // Custom-field reader: [field key="seo_focus"] prints a post meta value.
+    api.registerShortcode("field", async (attrs, _content, _tag, ctx) => {
+      const key = attrs.key ?? attrs.name ?? "";
+      if (!key || !ctx?.post) return "";
+      const { getPostMetaValue } = await import("../../press/models/postmeta");
+      return escapeHtml(await getPostMetaValue(ctx.post.id, key));
+    });
   },
 };

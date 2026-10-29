@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { User } from "@/press/types";
-import { VINEXTPRESS_VERSION } from "@/press/version";
+import { VINEXTPRESS_REPO, VINEXTPRESS_VERSION } from "@/press/version";
 import { AdminNav } from "./nav";
 import { logoutAction } from "../actions";
 
@@ -80,7 +80,15 @@ export function AdminShell({
         <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8">{children}</main>
 
         <footer className="px-6 pb-6 text-center text-[11px] text-slate-400">
-          VinextPress v{VINEXTPRESS_VERSION} — running on Cloudflare Workers
+          <a
+            href={VINEXTPRESS_REPO}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-semibold text-slate-500 hover:text-slate-800"
+          >
+            VinextPress
+          </a>{" "}
+          v{VINEXTPRESS_VERSION} — running on Cloudflare Workers
         </footer>
       </div>
     </div>

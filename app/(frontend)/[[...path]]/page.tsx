@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { notFound, redirect } from "next/navigation";
+import { notFound, redirect, permanentRedirect } from "next/navigation";
 import { getPress, type PressContext } from "@/press/context";
 import { resolveMainQuery } from "@/press/query";
 import { buildHead } from "@/press/head";
@@ -128,6 +128,16 @@ export default async function FrontendPage({ params }: Props) {
 
   const query = await resolveMainQuery(pathname, press);
   if (query.kind === "not-found") {
+    // Plugins (e.g. redirect managers) may claim unresolved paths first.
+    const interception = await press.applyFilters<{ target: string; permanent?: boolean } | null>(
+      CoreHooks.PreNotFound,
+      null,
+      [pathname],
+    );
+    if (interception?.target) {
+      if (interception.permanent === false) redirect(interception.target);
+      else permanentRedirect(interception.target);
+    }
     notFound();
   }
 

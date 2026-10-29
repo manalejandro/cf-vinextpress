@@ -1,6 +1,6 @@
 "use server";
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getPress } from "@/press/context";
 import { freshSettings, setOption } from "@/press/options";
@@ -17,6 +17,7 @@ import {
 } from "@/press/models/posts";
 import { deleteComment, getCommentById, setCommentStatus } from "@/press/models/comments";
 import { deleteMedia, uploadMedia, updateMedia } from "@/press/models/media";
+import { savePostMeta } from "@/press/models/postmeta";
 import { createTerm, listTerms } from "@/press/models/terms";
 import { revalidateSite, revalidatePage } from "@/press/cache";
 import { isReservedSlug, slugify } from "@/press/utils/slug";
@@ -44,8 +45,29 @@ export async function loginAction(_prev: FormState, formData: FormData): Promise
   const password = String(formData.get("password") ?? "");
   if (!username || !password) return { error: "Enter your username and password." };
 
+  const press = await getPress();
+  let ip = "";
+  try {
+    const headerList = await headers();
+    ip = headerList.get("cf-connecting-ip") ?? headerList.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "";
+  } catch {
+    ip = "";
+  }
+
+  // Security plugins can gate the attempt (rate limiting, lockouts…).
+  const gate = await press.applyFilters<{ allowed: boolean; reason?: string }>(
+    CoreHooks.LoginThrottle,
+    { allowed: true },
+    [{ username, ip }],
+  );
+  if (!gate.allowed) {
+    return { error: gate.reason ?? "Too many failed attempts. Please wait a few minutes and try again." };
+  }
+
   const creds = await getUserCredentials(username);
-  if (!creds || !(await verifyPassword(password, creds.passwordHash))) {
+  const ok = creds !== null && (await verifyPassword(password, creds.passwordHash));
+  await press.doAction(CoreHooks.LoginAttempt, [{ username, ip, success: ok }]);
+  if (!creds || !ok) {
     return { error: "Invalid credentials. Please try again." };
   }
 
@@ -190,7 +212,18 @@ export async function savePostAction(formData: FormData): Promise<void> {
     tags: type === "post" ? tags : undefined,
   });
 
-  await press.doAction(CoreHooks.PostSaved, [saved, existing]);
+  // Generic custom fields: any form input named meta[<key>].
+  const metaEntries: Record<string, string> = {};
+  for (const [key, value] of formData.entries()) {
+    if (key.startsWith("meta[") && key.endsWith("]")) {
+      metaEntries[key.slice(5, -1)] = String(value).slice(0, 20000);
+    }
+  }
+  if (Object.keys(metaEntries).length > 0) {
+    await savePostMeta(saved.id, metaEntries);
+  }
+
+  await press.doAction(CoreHooks.PostSaved, [saved, existing, user]);
   revalidateSite();
 
   const message = status === "publish" ? "published" : status === "trash" ? "trashed" : "saved";
@@ -360,6 +393,8 @@ export async function saveSettingsAction(formData: FormData): Promise<void> {
   for (const [name, value] of Object.entries(writes)) {
     await setOption(name, value);
   }
+  const press = await getPress();
+  await press.doAction(CoreHooks.SettingsSaved, [user.username]);
   revalidateSite();
   redirect("/admin/settings?saved=1");
 }
@@ -441,6 +476,46 @@ export async function updateUserRoleAction(formData: FormData): Promise<void> {
   if (id === current.id && role !== "administrator") throw new Error("You cannot demote your own account.");
   await updateUser(id, { role });
   redirect("/admin/users?updated=1");
+}
+
+/**
+ * Full user edit from the dashboard: display name, email, role and —
+ * optionally — a new password (leave the field blank to keep the current
+ * one). Administrators only; you cannot demote your own account.
+ */
+export async function updateUserAction(formData: FormData): Promise<void> {
+  await assertInstalled();
+  const current = await requireUser("administrator");
+  if (!can(current, "manage_users")) throw new Error("Insufficient permissions.");
+
+  const id = Number(formData.get("id") ?? 0);
+  const users = await listUsers();
+  const target = users.find((u) => u.id === id);
+  if (!target) throw new Error("User not found.");
+
+  const displayName = String(formData.get("display_name") ?? "").trim().slice(0, 120);
+  const email = String(formData.get("email") ?? "").trim().toLowerCase().slice(0, 190);
+  const role = String(formData.get("role") ?? "") as UserRole;
+  const password = String(formData.get("password") ?? "");
+
+  if (!displayName) throw new Error("Display name is required.");
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("Enter a valid email address.");
+  if (users.some((u) => u.id !== id && u.email.toLowerCase() === email)) {
+    throw new Error("That email is already used by another account.");
+  }
+  if (!["administrator", "editor", "author"].includes(role)) throw new Error("Unknown role.");
+  if (id === current.id && role !== "administrator") {
+    throw new Error("You cannot demote your own account.");
+  }
+  if (password && password.length < 8) throw new Error("New password must be at least 8 characters.");
+
+  await updateUser(id, {
+    displayName,
+    email,
+    role,
+    passwordHash: password ? await hashPassword(password) : undefined,
+  });
+  redirect(`/admin/users?updated=1${id === current.id ? "&self=1" : ""}`);
 }
 
 export async function deleteUserAction(formData: FormData): Promise<void> {

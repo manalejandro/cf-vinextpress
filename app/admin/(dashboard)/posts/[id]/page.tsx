@@ -50,6 +50,7 @@ export default async function EditPostPage({
 
       <PostEditor
         type="post"
+        press={press}
         post={post}
         user={user}
         categories={categories}

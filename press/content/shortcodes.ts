@@ -15,7 +15,14 @@ export type ShortcodeHandler = (
   attrs: Record<string, string>,
   content: string | null,
   tag: string,
+  ctx?: ShortcodeContext,
 ) => string | Promise<string>;
+
+/** Extra context handed to shortcode handlers during content rendering. */
+export interface ShortcodeContext {
+  post?: { id: number; type: string; slug: string; title: string };
+  press?: import("../context").PressContext;
+}
 
 export type ShortcodeRegistry = Map<string, ShortcodeHandler>;
 
@@ -37,7 +44,11 @@ const SHORTCODE_SOURCE =
   String.raw`\[([a-zA-Z][\w-]*)((?:[^\[\]]*|\[[^\[\]]*\])*?)(\/)?\](?:([\s\S]*?)\[\/\1\])?`;
 
 /** Expand every registered shortcode in `content`, depth-first. */
-export async function doShortcodes(content: string, registry: ShortcodeRegistry): Promise<string> {
+export async function doShortcodes(
+  content: string,
+  registry: ShortcodeRegistry,
+  ctx?: ShortcodeContext,
+): Promise<string> {
   if (!content.includes("[") || registry.size === 0) return content;
 
   const MAX_DEPTH = 8;
@@ -54,11 +65,17 @@ export async function doShortcodes(content: string, registry: ShortcodeRegistry)
       const handler = registry.get(tag);
       if (!handler) continue;
       out += input.slice(lastIndex, match.index);
-      const attrs = parseAttrs(match[2] ?? "");
+      // Markdown rendering HTML-escapes attribute quotes (&quot;); undo that
+      // before parsing so [x key="value"] works inside Markdown content.
+      const attrsRaw = (match[2] ?? "")
+        .replace(/&quot;/g, '"')
+        .replace(/&#39;/g, "'")
+        .replace(/&amp;/g, "&");
+      const attrs = parseAttrs(attrsRaw);
       const inner =
         match[4] !== undefined && depth < MAX_DEPTH ? await expand(match[4], depth + 1) : (match[4] ?? null);
       try {
-        out += await handler(attrs, inner, tag);
+        out += await handler(attrs, inner, tag, ctx);
       } catch {
         out += match[0]; // keep the raw shortcode if the handler blew up
       }

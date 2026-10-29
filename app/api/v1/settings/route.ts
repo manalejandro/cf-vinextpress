@@ -1,4 +1,5 @@
 import { can, getCurrentUser } from "@/press/auth";
+import { CoreHooks } from "@/press/hooks";
 import { getPress } from "@/press/context";
 import { setOption } from "@/press/options";
 import { handleRest, json } from "@/press/rest";
@@ -95,6 +96,8 @@ export async function PUT(request: Request): Promise<Response> {
     for (const [name, value] of Object.entries(writes)) {
       await setOption(name, value);
     }
+    const press = await getPress();
+    await press.doAction(CoreHooks.SettingsSaved, [user.username]);
     revalidateSite();
 
     const { freshSettings } = await import("@/press/options");

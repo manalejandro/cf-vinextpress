@@ -12,7 +12,7 @@ Built with [vinext](https://vinext.dev) — the Next.js API surface re-implement
 
 - **Posts & pages** — Markdown or HTML content, drafts/private/published states, hierarchical pages, featured images, excerpts, reading-time, previous/next navigation
 - **Themes** — swap the entire look of the site at runtime; themes are folders of React Server Components with a manifest, a palette and a template hierarchy (home / index / single / page / archive / search / 404 / comments / pagination)
-- **Plugins** — extend everything through async filters and actions (`render_content`, `document_head`, `comment_preprocess`, `post_saved`…), register `[shortcodes]` and mount REST routes under `/api/v1/ext/<plugin>/…`
+- **Plugins** — eleven bundled extensions (SEO suite with per-post meta boxes, form builder with submissions inbox, redirect manager, cookieless analytics, login firewall + audit log, consent banner, share buttons, related posts, spam shield, shortcodes…) built on async filters/actions (`render_content`, `document_head`, `comment_preprocess`, `pre_not_found`, `login_throttle`…), `[shortcodes]`, plugin REST routes under `/api/v1/ext/<plugin>/…` and plugin-owned dashboard screens at `/admin/ext/<plugin>`
 - **Dashboard** — `/admin`: install wizard, editor with live Markdown preview, comment moderation, media library, theme switcher, plugin toggles, settings, users & roles
 - **REST API** — self-describing `/api/v1` with posts, pages, comments, categories, tags, media, users, settings, themes and plugins
 - **Media library** — R2-backed uploads served through `/media/<key>` with on-the-fly resizing (`?w=800`) and format conversion (`&fmt=webp`) via the Images binding
@@ -126,7 +126,7 @@ press/                the core engine
   ├─ content/         markdown, shortcodes, formatting
   ├─ plugins/, themes/  registries + extension contracts
   └─ components/      core UI: comment form, comments, pagination, search
-themes/               meridian/, nocturne/ (+ index.ts registry)
+themes/               meridian/, nocturne/, broadsheet/, kite/ (+ index.ts registry)
 plugins/              seo-suite/, related-posts/, spam-shield/, shortcode-pack/
 migrations/           D1 schema migrations (mirrored by press/db/schema.ts)
 docs/                 THEMES.md · PLUGINS.md · API.md

@@ -5,8 +5,9 @@ import { doShortcodes } from "./content/shortcodes";
 import { markdownToHtml } from "./content/markdown";
 import { escapeHtml, makeExcerpt } from "./content/format";
 import { loadSettings, type LoadedSettings } from "./options";
+import { ensureSchemaCurrent } from "./db/schema";
 import { listPlugins } from "./plugins/registry";
-import { createPluginAPI, type PluginAPI, type RegisteredPluginRoute } from "./plugins/types";
+import { createPluginAPI, type PluginAdminPage, type PluginAPI, type RegisteredPluginRoute } from "./plugins/types";
 import { getDefaultTheme, getTheme } from "./themes/registry";
 import type { Theme } from "./themes/types";
 import type { Post, SiteContext } from "./types";
@@ -27,12 +28,14 @@ export interface PressContext {
   theme: Theme;
   /** REST routes registered by active plugins, for the /api/v1/ext dispatcher. */
   pluginRoutes: RegisteredPluginRoute[];
+  /** Dashboard screens registered by active plugins, keyed by plugin slug. */
+  adminPages: Map<string, PluginAdminPage>;
   /** Run a filter hook; `args` are the extra arguments after the value. */
   applyFilters<T>(hook: string, value: T, args?: unknown[]): Promise<T>;
   /** Run an action hook. */
   doAction(hook: string, args?: unknown[]): Promise<void>;
   /** Full content pipeline: markdown/html -> shortcodes -> `render_content` filters. */
-  renderContent(post: Pick<Post, "content" | "contentFormat">): Promise<string>;
+  renderContent(post: Pick<Post, "content" | "contentFormat" | "id" | "type" | "slug" | "title">): Promise<string>;
   renderTitle(post: Pick<Post, "title">): Promise<string>;
   renderExcerpt(post: Pick<Post, "excerpt" | "content" | "contentFormat">): Promise<string>;
   /** Relative permalink for a post, after `post_permalink` filters. */
@@ -41,9 +44,11 @@ export interface PressContext {
 
 /** Boot the full core context for a known settings snapshot. */
 export async function bootPress(settings: LoadedSettings): Promise<PressContext> {
+  await ensureSchemaCurrent();
   const hooks = new HookRegistry();
   const shortcodes: Map<string, ShortcodeHandler> = new Map();
   const pluginRoutes: RegisteredPluginRoute[] = [];
+  const adminPages = new Map<string, PluginAdminPage>();
 
   const activePlugins = new Set(settings.activePlugins);
 
@@ -51,14 +56,14 @@ export async function bootPress(settings: LoadedSettings): Promise<PressContext>
   // needs no extra gating.
   for (const plugin of listPlugins()) {
     if (!activePlugins.has(plugin.manifest.slug)) continue;
-    const api: PluginAPI = createPluginAPI(plugin.manifest.slug, hooks, shortcodes, pluginRoutes);
+    const api: PluginAPI = createPluginAPI(plugin.manifest.slug, hooks, shortcodes, pluginRoutes, adminPages);
     await plugin.setup(api);
   }
 
   // Boot the active theme (its setup() gets the same extension API).
   const theme = getTheme(settings.activeTheme) ?? getDefaultTheme();
   if (theme.setup) {
-    const api = createPluginAPI(`theme:${theme.manifest.slug}`, hooks, shortcodes, pluginRoutes);
+    const api = createPluginAPI(`theme:${theme.manifest.slug}`, hooks, shortcodes, pluginRoutes, adminPages);
     await theme.setup(api);
   }
 
@@ -76,11 +81,12 @@ export async function bootPress(settings: LoadedSettings): Promise<PressContext>
     activePlugins,
     theme,
     pluginRoutes,
+    adminPages,
     applyFilters: (hook, value, args = []) => hooks.applyFilters(hook, value, args),
     doAction: (hook, args = []) => hooks.doAction(hook, args),
     async renderContent(post) {
       let html = post.contentFormat === "markdown" ? markdownToHtml(post.content) : post.content;
-      html = await doShortcodes(html, shortcodes);
+      html = await doShortcodes(html, shortcodes, { post: { id: post.id, type: post.type, slug: post.slug, title: post.title }, press: ctx });
       html = await hooks.applyFilters(CoreHooks.RenderContent, html, [post, ctx]);
       return html;
     },

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound, redirect } from "next/navigation";
 import { canEditPost, getCurrentUser } from "@/press/auth";
+import { getPress } from "@/press/context";
 import { getPostById } from "@/press/models/posts";
 import { listPosts } from "@/press/models/posts";
 import { listMedia } from "@/press/models/media";
@@ -19,6 +20,7 @@ export default async function EditPagePage({
   const { id } = await params;
   const sp = await searchParams;
   const user = (await getCurrentUser())!;
+  const press = await getPress();
 
   const page = await getPostById(Number(id));
   if (!page || page.type !== "page") notFound();
@@ -45,6 +47,7 @@ export default async function EditPagePage({
 
       <PostEditor
         type="page"
+        press={press}
         post={page}
         user={user}
         categories={[]}

@@ -71,6 +71,8 @@ export async function listPostsResponse(url: URL, type: PostType, user: User | n
 
 export interface PostRequestBody {
   title?: string;
+  /** Custom fields (post meta): { "seo_title": "...", ... } */
+  meta?: Record<string, unknown>;
   slug?: string;
   content?: string;
   content_format?: "markdown" | "html";
@@ -120,6 +122,18 @@ function toSaveInput(body: PostRequestBody, type: PostType, authorId: number): S
   };
 }
 
+async function persistMeta(body: PostRequestBody, postId: number): Promise<void> {
+  if (!body.meta || typeof body.meta !== "object") return;
+  const entries: Record<string, string> = {};
+  for (const [key, value] of Object.entries(body.meta)) {
+    if (typeof value === "string") entries[key] = value.slice(0, 20000);
+  }
+  if (Object.keys(entries).length > 0) {
+    const { savePostMeta } = await import("../models/postmeta");
+    await savePostMeta(postId, entries);
+  }
+}
+
 /** Create a post/page through the REST API. */
 export async function createPostFromRequest(request: Request, type: PostType): Promise<Response> {
   const user = await requireUser("author");
@@ -130,7 +144,8 @@ export async function createPostFromRequest(request: Request, type: PostType): P
     throw new HttpError(403, "You are not allowed to publish.");
   }
   const saved = await savePost(toSaveInput(body, type, user.id));
-  await press.doAction(CoreHooks.PostSaved, [saved, null]);
+  await persistMeta(body, saved.id);
+  await press.doAction(CoreHooks.PostSaved, [saved, null, user]);
   revalidateSite();
   return json(await serializePost(press, saved), { status: 201 });
 }
@@ -148,7 +163,8 @@ export async function updatePostFromRequest(request: Request, idOrSlug: string, 
   const input = toSaveInput(body, type, existing.authorId);
   input.id = existing.id;
   const saved = await savePost(input);
-  await press.doAction(CoreHooks.PostSaved, [saved, existing]);
+  await persistMeta(body, saved.id);
+  await press.doAction(CoreHooks.PostSaved, [saved, existing, user]);
   revalidateSite();
   return json(await serializePost(press, saved));
 }

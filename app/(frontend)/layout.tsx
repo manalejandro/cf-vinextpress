@@ -1,5 +1,6 @@
-import type { CSSProperties, ReactNode } from "react";
+import { Fragment, type CSSProperties, type ReactNode } from "react";
 import { getPress } from "@/press/context";
+import { CoreHooks } from "@/press/hooks";
 
 /**
  * The frontend shell: wraps every public route in the active theme's
@@ -30,6 +31,9 @@ export default async function FrontendLayout({
   const { SiteHeader, SiteFooter } = theme.templates;
   const palette = (theme.manifest.palette ?? {}) as CSSProperties;
 
+  // Plugins/themes may contribute end-of-body nodes (consent banners, beacons…).
+  const footerExtras = await press.applyFilters<unknown[]>(CoreHooks.DocumentFooter, [], [press]);
+
   return (
     <div className="vp-theme flex min-h-screen flex-col" data-theme={theme.manifest.slug} style={palette}>
       <a
@@ -43,6 +47,9 @@ export default async function FrontendLayout({
         {children}
       </main>
       <SiteFooter press={press} site={press.site} path={pathname} />
+      {footerExtras.map((node, index) => (
+        <Fragment key={index}>{node as ReactNode}</Fragment>
+      ))}
     </div>
   );
 }

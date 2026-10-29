@@ -21,6 +21,7 @@ export default async function NewPostPage() {
       <PageHeader title="Add new post" description="Markdown by default — switch to HTML any time." />
       <PostEditor
         type="post"
+        press={press}
         user={user}
         categories={categories}
         media={media}

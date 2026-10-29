@@ -93,7 +93,7 @@ export const loadSettings: () => Promise<LoadedSettings> = cache(async () => fre
 
 export async function getOption(name: string, fallback = ""): Promise<string> {
   const row = await first(
-    db().prepare("SELECT value FROM vp_options WHERE name = ?1"),
+    db().prepare("SELECT value FROM vp_options WHERE name = ?1").bind(name),
     (r) => str(r, "value"),
   );
   return row ?? fallback;

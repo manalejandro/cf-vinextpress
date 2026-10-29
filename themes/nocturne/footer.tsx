@@ -1,4 +1,5 @@
 import type { HeaderProps } from "../../press/themes/types";
+import { VINEXTPRESS_REPO } from "../../press/version";
 
 /** Nocturne footer: a single quiet bar with mono type. */
 export function SiteFooter({ site }: HeaderProps) {
@@ -27,7 +28,15 @@ export function SiteFooter({ site }: HeaderProps) {
         </nav>
       </div>
       <p className="pb-6 text-center vp-font-mono text-[10px] tracking-widest text-[var(--vp-line)] uppercase">
-        powered by vinextpress
+        powered by{" "}
+        <a
+          href={VINEXTPRESS_REPO}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-[var(--vp-muted)] transition-colors hover:text-[var(--vp-accent)]"
+        >
+          vinextpress
+        </a>
       </p>
     </footer>
   );

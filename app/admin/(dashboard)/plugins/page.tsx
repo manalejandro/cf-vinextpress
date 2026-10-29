@@ -5,6 +5,7 @@ import { getPress } from "@/press/context";
 import { listPlugins } from "@/press/plugins/registry";
 import { togglePluginAction } from "../../actions";
 import { Flash, PageHeader } from "../../components/ui";
+import { VINEXTPRESS_REPO } from "@/press/version";
 
 export const metadata: Metadata = { title: "Plugins" };
 
@@ -49,7 +50,20 @@ export default async function PluginsPage({
                     ) : null}
                   </p>
                   <p className="mt-1 text-xs leading-5 text-slate-500">{plugin.manifest.description}</p>
-                  <p className="mt-1 text-[11px] text-slate-400">by {plugin.manifest.author}</p>
+                  <p className="mt-1 text-[11px] text-slate-400">
+                    by {plugin.manifest.author}
+                    {press.adminPages.has(plugin.manifest.slug) ? (
+                      <>
+                        {" · "}
+                        <Link
+                          href={`/admin/ext/${plugin.manifest.slug}`}
+                          className="font-semibold text-orange-600 hover:text-orange-500"
+                        >
+                          open screen →
+                        </Link>
+                      </>
+                    ) : null}
+                  </p>
                 </div>
 
                 {canManage ? (
@@ -79,7 +93,7 @@ export default async function PluginsPage({
         <code className="vp-font-mono">PluginDefinition</code> and register it in{" "}
         <code className="vp-font-mono">plugins/index.ts</code>. Hooks, shortcodes and REST routes are all available —
         see{" "}
-        <Link href="https://github.com/manalejandro/cf-vinextpress/blob/main/docs/PLUGINS.md" className="text-orange-600 hover:underline">
+        <Link href={`${VINEXTPRESS_REPO}/blob/main/docs/PLUGINS.md`} className="text-orange-600 hover:underline">
           docs/PLUGINS.md
         </Link>
         .

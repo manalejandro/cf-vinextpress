@@ -94,7 +94,7 @@ File bytes are served (and transformed) at `GET /media/{r2_key}` — not part of
 ```
 GET  /api/v1/users        (auth; emails hidden from non-admins)
 POST /api/v1/users        (admin) { "username", "email", "password", "role", "display_name"? }
-PATCH /api/v1/users       (self-service profile, or admin for others) { "display_name"?, "password"?, "id"? }
+PATCH /api/v1/users       { "display_name"?, "email"?, "password"?, "role"? (admin), "id"? (admin targets others) }
 GET  /api/v1/users/me
 ```
 

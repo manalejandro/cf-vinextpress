@@ -2,7 +2,21 @@
 
 A plugin is a plain TypeScript module: a manifest plus a `setup()` function. Because plugins are bundled at build time and gated by an option at runtime, activating/deactivating is instant and requires no deploy — but adding a *new* plugin to the codebase does.
 
-Bundled examples live in [`plugins/`](../plugins): **SEO Suite** (`document_head`), **Related Posts** (`render_content`), **Spam Shield** (`comment_preprocess`), **Shortcode Pack** (shortcodes).
+Bundled plugins live in [`plugins/`](../plugins):
+
+| Plugin | Family it replaces | Main hooks used |
+| --- | --- | --- |
+| **SEO Suite** | basic meta/OG/JSON-LD | `document_head` |
+| **Searchlight SEO** | per-post SEO suites | `admin_post_editor`, `document_head`, shortcode |
+| **Related Posts** | related-content modules | `render_content` |
+| **Spam Shield** | comment spam filters | `comment_preprocess` |
+| **Shortcode Pack** | shortcode collections | shortcodes (`[note] [button] [image] [year] [hr] [field]`) |
+| **Formsmith** | contact-form builders | shortcodes, REST routes, admin page, `document_footer` |
+| **Waypoint** | redirect managers | `pre_not_found`, REST routes, admin page |
+| **Pulse Stats** | cookieless analytics | `document_footer` (beacon), REST routes, admin page |
+| **Bastion Security** | login firewalls / audit logs | `login_throttle`, `login_attempt`, actions |
+| **Consent Kit** | cookie-notice banners | `document_footer`, admin page |
+| **Social Share** | share-button bars | `render_content`, `document_footer` |
 
 ## Quick start
 
@@ -48,8 +62,9 @@ Deploy, then toggle it under **Dashboard → Plugins** (or `POST /api/v1/plugins
 interface PluginAPI {
   addFilter<T>(hook: string, cb: (value: T, ...args) => T | Promise<T>, priority?: number): void;
   addAction(hook: string, cb: (...args) => void | Promise<void>, priority?: number): void;
-  registerShortcode(name: string, handler: (attrs, content | null, tag) => string | Promise<string>): void;
+  registerShortcode(name: string, handler: (attrs, content | null, tag, ctx?) => string | Promise<string>): void;
   registerRestRoute(path: string, handlers: { GET?, POST?, PUT?, DELETE? }): void;
+  registerAdminPage(page: { title, description?, capability?, render(ctx): ReactNode }): void;
 }
 ```
 
@@ -73,6 +88,9 @@ Filters run sequentially in priority order (lower first, default `10`); each rec
 | `feed_items` | `PostWithAuthor[]` | `settings` | RSS generation |
 | `post_permalink` | `path: string` | `post, settings` | every URL computation |
 | `archive_title` | `title: string` | `query` | archive/search headings |
+| `document_footer` | `ReactNode[]` | `press` | end-of-`<body>` contributions (banners, beacons, `<style>`) |
+| `admin_post_editor` | `ReactNode[]` | `{post, type, press}` | extra editor fields (`meta[…]` inputs persist automatically) |
+| `pre_not_found` | `{target, permanent?} \| null` | `pathname` | claim unresolved URLs (redirect managers) before the 404 |
 
 ### Actions
 
@@ -84,6 +102,9 @@ Filters run sequentially in priority order (lower first, default `10`); each rec
 | `media_uploaded` | `media` | after R2 put + row insert |
 | `install_completed` | `settings` | installer finished |
 | `theme_setup` | `theme, press` | active theme booted for the request |
+| `login_throttle` (filter) | `{allowed, reason?}` | `{username, ip}` | gate a sign-in attempt before credential checks |
+| `login_attempt` | `{username, ip, success}` | — | every dashboard sign-in attempt |
+| `settings_saved` | `username` | — | site settings persisted |
 
 ### Contributing to `<head>`
 
@@ -115,8 +136,29 @@ Authors write `[cta url="/pricing"]See pricing[/cta]`. Details:
 - Attributes: `key="value"`, `key='value'`, `key=value` and bare flags (`[hr large]` → `attrs.large === "true"`)
 - Paired (`[x]…[/x]`) or self-closing (`[x /]`); inner content is expanded recursively (depth-capped) and passed as `content`
 - Handlers are `async` — query D1, call other services
+- The fourth argument `ctx` carries `{ post, press }` during content rendering (used by `[field]` and `[breadcrumbs]`)
 - Unknown shortcodes render as literal text
 - Output runs **before** `render_content` filters and before caching (no client JS involved)
+
+## Dashboard screens
+
+`registerAdminPage` mounts a server-rendered screen at `/admin/ext/<plugin-slug>`:
+
+```ts
+api.registerAdminPage({
+  title: "My Plugin",
+  capability: "editor",            // defaults to "administrator"
+  async render({ press, user, searchParams }) {
+    return <div>…any server JSX…</div>;
+  },
+});
+```
+
+Forms inside the screen can point at your own `"use server"` action module (see `plugins/formsmith/actions.ts`). The Plugins list in the dashboard links to every registered screen automatically.
+
+## Custom fields (post meta)
+
+The editor renders anything contributed through the `admin_post_editor` filter as form fields; inputs named `meta[<key>]` are persisted to the post-meta table automatically (same via REST: `PUT /api/v1/posts/{id} {"meta": {"seo_title": "…"}}`). Read them back with `getPostMeta()`/`getPostMetaValue()` or the `[field key="…"]` shortcode.
 
 ## Plugin REST routes
 

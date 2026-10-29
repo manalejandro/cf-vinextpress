@@ -1,4 +1,5 @@
 import type { HeaderProps } from "../../press/themes/types";
+import { VINEXTPRESS_REPO } from "../../press/version";
 
 /** Meridian footer: three columns — brand, menu and utilities. */
 export function SiteFooter({ site }: HeaderProps) {
@@ -50,8 +51,16 @@ export function SiteFooter({ site }: HeaderProps) {
 
       <div className="border-t border-[var(--vp-line)]">
         <p className="mx-auto max-w-5xl px-6 py-5 text-xs text-[var(--vp-muted)]">
-          © {year} {siteTitle}. Published with <span className="font-semibold">VinextPress</span> on Cloudflare
-          Workers.
+          © {year} {siteTitle}. Published with{" "}
+          <a
+            href={VINEXTPRESS_REPO}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-semibold text-[var(--vp-ink)] transition-colors hover:text-[var(--vp-accent)]"
+          >
+            VinextPress
+          </a>{" "}
+          on Cloudflare Workers.
         </p>
       </div>
     </footer>

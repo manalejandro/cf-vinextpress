@@ -2,7 +2,16 @@
 
 A VinextPress theme is a folder of React Server Components plus a manifest. Themes never touch the database: the core resolves every request into a `MainQuery`, runs the content pipeline (Markdown → shortcodes → filters), and hands ready-to-render data to your templates.
 
-Bundled themes live in [`themes/`](../themes): **Meridian** (default, light editorial serif) and **Nocturne** (dark, terminal-inspired). Copy either one as a starting point.
+Bundled themes live in [`themes/`](../themes):
+
+| Theme | Character |
+| --- | --- |
+| **Meridian** (default) | warm editorial serif, paper palette, hairline rules |
+| **Nocturne** | dark terminal-inspired, mono kickers, card grid |
+| **Broadsheet** | newspaper magazine: dated masthead, lead story + sections sidebar, drop caps |
+| **Kite** | minimal multipurpose: cool neutrals, hairlines, generous whitespace |
+
+Copy any of them as a starting point.
 
 ## Anatomy
 

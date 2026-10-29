@@ -6,6 +6,7 @@ import { listThemes } from "@/press/themes/registry";
 import { listPosts } from "@/press/models/posts";
 import { activateThemeAction, saveNavMenuAction } from "../../actions";
 import { BTN_PRIMARY, Card, Flash, INPUT, PageHeader } from "../../components/ui";
+import { VINEXTPRESS_REPO } from "@/press/version";
 
 export const metadata: Metadata = { title: "Appearance" };
 
@@ -78,7 +79,7 @@ export default async function AppearancePage({
       <p className="mt-4 text-xs text-slate-400">
         Themes are code-first: drop a new folder into <code className="vp-font-mono">themes/</code> and register it
         in <code className="vp-font-mono">themes/index.ts</code>. See{" "}
-        <Link href="https://github.com/manalejandro/cf-vinextpress/blob/main/docs/THEMES.md" className="text-orange-600 hover:underline">
+        <Link href={`${VINEXTPRESS_REPO}/blob/main/docs/THEMES.md`} className="text-orange-600 hover:underline">
           docs/THEMES.md
         </Link>
         .
